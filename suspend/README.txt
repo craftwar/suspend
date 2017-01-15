@@ -1,0 +1,6 @@
+Usage: 
+to suspend
+suspend.exe [process name] .....
+
+to resume
+suspend.exe -r [process name] .....
