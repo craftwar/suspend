@@ -1,2 +1,2 @@
 # suspend
-suspend/resume a list of process in windows
+suspend/resume a list of process in Windows
