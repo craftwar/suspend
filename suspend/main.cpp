@@ -7,8 +7,8 @@
 #include <iostream>
 
 #ifdef WIN32
-#include <qt_windows.h>
 #define _UNICODE
+#include <qt_windows.h>
 #include <WinNT.h>
 #include <Psapi.h>
 #include <tchar.h>
@@ -141,21 +141,29 @@ int main(int argc, char *argv[])
 
 //****
 
+    if (bResume)
+    {
+        std::wcout <<"resumed process(es):"<< endl;
+    }
+    else
+    {
+        std::wcout <<"suspended process(es):"<< endl;
 
+    }
     for (unsigned int i = 0; i < cProcesses; i++ )
     {
         if( aProcesses[i] != 0 )
         {
-            hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |PROCESS_VM_READ | PROCESS_SUSPEND_RESUME, false, aProcesses[i]);
+            hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME, false, aProcesses[i]);
             if (hProcess)
             {
                 //BUG:  call GetProcessImageFileName() before QueryFullProcessImageName() or QueryFullProcessImageName() doesn't work properly
                 //      That's why MSDN use strange exampe to get process name.
                 result = GetProcessImageFileName(hProcess, szProcessName, MAX_PATH);
+//                result =1;
                 if ( result && QueryFullProcessImageName(hProcess, 0, szProcessName, &result) )
                 {
                     exeName = _tcsrchr(szProcessName, '\\');
-                    szProcessName[result] = TEXT('\0');
 //                    std::wcout << "szProcessName: "<< szProcessName <<endl;
 //                        std::wcout << "exeName: " << ++exeName << endl;
                     if ( exeName++ && nameList.contains( QString::fromWCharArray(exeName) ))
@@ -165,13 +173,12 @@ int main(int argc, char *argv[])
                         if (bResume)
                         {
                             if (!pfnNtResumeProcess(hProcess))
-                                std::wcout <<"resume process " << exeName << endl;
+                                std::wcout << exeName << endl;
                         }
                         else
                         {
                             if(!pfnNtSuspendProcess(hProcess))
-                                std::wcout <<"suspend process " << exeName << endl;
-
+                                std::wcout << exeName << endl;
                         }
                     }
 				}
