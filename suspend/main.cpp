@@ -38,19 +38,23 @@ int main(int argc, char *argv[])
 
     NtSuspendProcess pfnNtSuspendProcess = (NtSuspendProcess)GetProcAddress( GetModuleHandle( TEXT("ntdll") ), "NtSuspendProcess");
     NtResumeProcess pfnNtResumeProcess = (NtResumeProcess)GetProcAddress( GetModuleHandle( TEXT("ntdll") ), "NtResumeProcess");
-    bool bResume = false;
-    Qt::CaseSensitivity bCaseSensitivity = Qt::CaseInsensitive;
+    bool bResume, bNoOp;
+    Qt::CaseSensitivity bCaseSensitivity;
     TCHAR szProcessName[MAX_PATH];
     _TCHAR* exeName;
     DWORD aProcesses[1024], cbNeeded, cProcesses, result;
     HANDLE hProcess;
 
     //TODO
+    //help text and description
+    //pid mode
     QCommandLineParser parser;
-    parser.setApplicationDescription("Test helper");
-    parser.addHelpOption();
+//    parser.setApplicationDescription("Test helper");
+//    parser.addHelpOption();
     parser.addOptions({
-        // A boolean option with a single name (-p)
+        {"n", "no operation"},
+        {"r", "resume"},
+        {"s", "case sensitive"},
         {"p", "process id"},
 //        // A boolean option with multiple names (-f, --force)
 //        {{"f", "force"},
@@ -60,14 +64,14 @@ int main(int argc, char *argv[])
 //            QCoreApplication::translate("main", "Copy all source files into <directory>."),
 //            QCoreApplication::translate("main", "directory")},
     });
+//    bool parseResult = parser.parse(a.arguments());
+    parser.process(a);
+    bResume = parser.isSet("r");
+    bNoOp = parser.isSet("n");
+    bCaseSensitivity = parser.isSet("s")? Qt::CaseSensitive : Qt::CaseInsensitive;
+//    bool bPID = parser.isSet(showProgressOption);
 
-    QStringList nameList = a.arguments();
-    nameList.removeFirst();
-    if ( !nameList.empty() && !nameList.at(0).compare("-r") )
-    {
-        nameList.removeFirst();
-        bResume = true;
-    }
+    QStringList nameList = parser.positionalArguments();
 
 
     // Get the list of process identifiers.
@@ -142,6 +146,8 @@ int main(int argc, char *argv[])
 
 //****
 
+    if (bNoOp)
+        std::wcout <<"no operation mode"<< endl;
     if (bResume)
     {
         std::wcout <<"resumed process(es):"<< endl;
@@ -149,7 +155,6 @@ int main(int argc, char *argv[])
     else
     {
         std::wcout <<"suspended process(es):"<< endl;
-
     }
     for (unsigned int i = 0; i < cProcesses; i++ )
     {
@@ -171,16 +176,21 @@ int main(int argc, char *argv[])
                     {
 //                        qDebug() << nameList << endl;
 //                        wcout <<"find" << endl;
-                        if (bResume)
+                        if (!bNoOp)
                         {
-                            if (!pfnNtResumeProcess(hProcess))
-                                std::wcout << exeName << endl;
+                            if (bResume)
+                            {
+                                if (!pfnNtResumeProcess(hProcess))
+                                    std::wcout << exeName << endl;
+                            }
+                            else
+                            {
+                                if(!pfnNtSuspendProcess(hProcess))
+                                    std::wcout << exeName << endl;
+                            }
                         }
                         else
-                        {
-                            if(!pfnNtSuspendProcess(hProcess))
-                                std::wcout << exeName << endl;
-                        }
+                            std::wcout << exeName << endl;
                     }
 				}
             }
