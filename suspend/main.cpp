@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
     NtSuspendProcess pfnNtSuspendProcess = (NtSuspendProcess)GetProcAddress( GetModuleHandle( TEXT("ntdll") ), "NtSuspendProcess");
     NtResumeProcess pfnNtResumeProcess = (NtResumeProcess)GetProcAddress( GetModuleHandle( TEXT("ntdll") ), "NtResumeProcess");
     bool bResume = false;
+    Qt::CaseSensitivity bCaseSensitivity = Qt::CaseInsensitive;
     TCHAR szProcessName[MAX_PATH];
     _TCHAR* exeName;
     DWORD aProcesses[1024], cbNeeded, cProcesses, result;
@@ -166,7 +167,7 @@ int main(int argc, char *argv[])
                     exeName = _tcsrchr(szProcessName, '\\');
 //                    std::wcout << "szProcessName: "<< szProcessName <<endl;
 //                        std::wcout << "exeName: " << ++exeName << endl;
-                    if ( exeName++ && nameList.contains( QString::fromWCharArray(exeName) ))
+                    if ( exeName++ && nameList.contains( QString::fromWCharArray(exeName), bCaseSensitivity ))
                     {
 //                        qDebug() << nameList << endl;
 //                        wcout <<"find" << endl;
