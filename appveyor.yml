@@ -4,4 +4,5 @@ install:
 build_script:
   - cd suspend
   - qmake suspend.pro
-  - C:\Qt\Tools\QtCreator\bin\jom.exe -f Makefile
+  - %comspec% /k ""C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"" x86 & C:\Qt\Tools\QtCreator\bin\jom.exe -f Makefile
+  
