@@ -49,13 +49,13 @@ int main(int argc, char *argv[])
     //help text and description
     //pid mode
     QCommandLineParser parser;
-//    parser.setApplicationDescription("Test helper");
-//    parser.addHelpOption();
+    parser.setApplicationDescription("suspends/resumes process(es)");
+    parser.addHelpOption();
     parser.addOptions({
         {"n", "no operation"},
         {"r", "resume"},
         {"s", "case sensitive"},
-        {"p", "process id"},
+        {"p", "process id (not implemented)"},
 //        // A boolean option with multiple names (-f, --force)
 //        {{"f", "force"},
 //            QCoreApplication::translate("main", "Overwrite existing files.")},
