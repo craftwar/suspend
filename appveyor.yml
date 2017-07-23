@@ -1,13 +1,14 @@
+version: '{build}'
 environment:
-  QTDIR: C:\Qt\5.8\msvc2015
+  QTDIR: C:\Qt\5.9\msvc2015
   PATH: '%PATH%;%QTDIR%\bin;'
 build_script:
 - cmd: >-
+    call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
+
     cd suspend
 
     qmake suspend.pro
-
-    call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
 
     C:\Qt\Tools\QtCreator\bin\jom.exe -f Makefile
 
