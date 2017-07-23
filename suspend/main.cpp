@@ -13,6 +13,8 @@
 #include <WinNT.h>
 #include <Psapi.h>
 #include <tchar.h>
+#include <fcntl.h>
+#include <io.h>
 #endif
 
 
@@ -45,10 +47,15 @@ int main(int argc, char *argv[])
     _TCHAR* exeName;
     DWORD aProcesses[1024], cbNeeded, cProcesses, result;
     HANDLE hProcess;
-    std::locale::global(std::locale(""));
-//	std::locale::global(std::locale("en_US.UTF-8"));
+// 1) set locale to fix wcout but not working
+//    std::locale::global(std::locale(""));
+//    std::locale::global(std::locale("Japan"));
+//    std::locale::global(std::locale("LC_ALL=en_US.UTF-8"));
 //	SetConsoleCP(65001);
 //	SetConsoleOutputCP(65001);
+// 2) _setmode range wtext > u16text?
+//    _setmode(_fileno(stdout), _O_U16TEXT);
+    _setmode(_fileno(stdout), _O_WTEXT);
 
     //TODO
     //help text and description
