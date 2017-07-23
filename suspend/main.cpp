@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QTextStream>
 
+#include <locale>
 #include <iostream>
 
 #ifdef WIN32
@@ -44,6 +45,10 @@ int main(int argc, char *argv[])
     _TCHAR* exeName;
     DWORD aProcesses[1024], cbNeeded, cProcesses, result;
     HANDLE hProcess;
+    std::locale::global(std::locale(""));
+//	std::locale::global(std::locale("en_US.UTF-8"));
+//	SetConsoleCP(65001);
+//	SetConsoleOutputCP(65001);
 
     //TODO
     //help text and description
