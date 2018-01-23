@@ -6,7 +6,7 @@ environment:
   QTDIR: C:\Qt\5.9\msvc2015
   PATH: '%PATH%;%QTDIR%\bin;'
   APPVEYOR_RDP_PASSWORD:
-    secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=  
+    secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
 build_script:
 - cmd: >-
     call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
@@ -21,5 +21,6 @@ build_script:
 
     7z a %APPVEYOR_BUILD_FOLDER%\suspend.7z *.exe %QTDIR%\bin\Qt5Core.dll
 
+test: off
 artifacts:
 - path: suspend.7z
