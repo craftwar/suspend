@@ -17,8 +17,5 @@ suspend.exe -r a.exe b.exe
 
 
 use in .cmd/.bat batch file: (save in UTF-8, not UTF-8 BOM)
-
-chcp 65001
-suspend.exe a.exe b.exe
-pause
-suspend.exe -r a.exe b.exe
+sample file: suspend.cmd (I use this script to fast suspend/resume)
+modify the first line after "set suspend_targets=" to yoour targets
