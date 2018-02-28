@@ -16,6 +16,8 @@ to resume
 suspend.exe -r a.exe b.exe
 
 
-use in .cmd/.bat batch file: (save in UTF-8, not UTF-8 BOM)
+.cmd/.bat batch file usage: (save in UTF-8, not UTF-8 BOM)
 sample file: suspend.cmd (I use this script to fast suspend/resume)
-modify the first line after "set suspend_targets=" to yoour targets
+modify the second line after "set suspend_targets=" to yoour targets
+Use NotePad++ to edit it. 
+Don't use windows built-in notepad. (It will add BOM to UTF-8 file)
