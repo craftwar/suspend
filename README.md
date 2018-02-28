@@ -9,3 +9,6 @@ ex: suspend a game to play another game smoothly or use as fast mute. (suspend t
 [lastest build from appveyor](https://ci.appveyor.com/api/projects/craftwar_appveyor/suspend/artifacts/suspend.7z?branch=master) (when I am lazy to make realease on github) 
 
 If you get missing dll error, try to install [Visual C++ Redistributable for Visual Studio 2017](https://go.microsoft.com/fwlink/?LinkId=746571)  
+
+usage guide and sample batch file  
+https://github.com/craftwar/suspend/tree/master/suspend
