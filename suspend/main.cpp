@@ -1,23 +1,18 @@
-#include <QCoreApplication>
-#include <QStringList>
-#include <QCommandLineParser>
-#ifdef QT_DEBUG
-    #include <QDebug>
+#ifdef WIN32
+//#define WINVER 0x0601
+//#define _WIN32_WINNT 0x0601
+#ifndef _UNICODE
+#define _UNICODE
 #endif
-#include <QTextStream>
+
+#endif
 
 #include <locale>
 #include <iostream>
 
 #ifdef WIN32
-
-#define WINVER 0x0601
-#define _WIN32_WINNT 0x0601
-#ifndef _UNICODE
-	#define _UNICODE
-#endif
-
 #include <qt_windows.h>
+
 #include <WinNT.h>
 #include <Psapi.h>
 #include <tchar.h>
@@ -25,6 +20,19 @@
 #include <io.h>
 
 #endif
+
+#include <QCoreApplication>
+#include <QStringList>
+#include <QCommandLineParser>
+#include <QTextStream>
+
+#ifdef QT_DEBUG
+#include <QDebug>
+#endif
+
+
+
+
 
 typedef LONG (NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
 typedef LONG (NTAPI *NtResumeProcess)(IN HANDLE ProcessHandle);
@@ -46,13 +54,18 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    NtSuspendProcess pfnNtSuspendProcess = (NtSuspendProcess)GetProcAddress( GetModuleHandle( TEXT("ntdll") ), "NtSuspendProcess");
-    NtResumeProcess pfnNtResumeProcess = (NtResumeProcess)GetProcAddress( GetModuleHandle( TEXT("ntdll") ), "NtResumeProcess");
+    HMODULE hNtdll = GetModuleHandle(TEXT("ntdll"));
+    NtSuspendProcess pfnNtSuspendProcess = (NtSuspendProcess)
+            GetProcAddress( hNtdll, "NtSuspendProcess");
+    NtResumeProcess pfnNtResumeProcess = (NtResumeProcess)
+            GetProcAddress( hNtdll, "NtResumeProcess");
+
     bool bResume, bNoOp;
     Qt::CaseSensitivity bCaseSensitivity;
     TCHAR szProcessName[MAX_PATH];
-    _TCHAR* exeName;
-    DWORD aProcesses[1024], cbNeeded, cProcesses;
+    TCHAR *exeName;
+    DWORD aProcesses[1024]; // change this to fit your use case
+    DWORD cbNeeded, cProcesses;
 //    DWORD result;
     DWORD *Process_cur = aProcesses + 1; // skip System Idle Process
     DWORD *Process_end; //not included
@@ -92,7 +105,8 @@ int main(int argc, char *argv[])
     parser.process(a);
     bResume = parser.isSet("r");
     bNoOp = parser.isSet("n");
-    bCaseSensitivity = parser.isSet("s")? Qt::CaseSensitive : Qt::CaseInsensitive;
+    bCaseSensitivity = parser.isSet("s")? Qt::CaseSensitive
+                                        : Qt::CaseInsensitive;
 //    bool bPID = parser.isSet(showProgressOption);
 
     QStringList nameList = parser.positionalArguments();
@@ -103,66 +117,52 @@ int main(int argc, char *argv[])
 
     // Get the list of process identifiers.
     if ( !EnumProcesses( aProcesses, sizeof(aProcesses), &cbNeeded ) )
-    {
         return 1;
-    }
 
     // Calculate how many process identifiers were returned.
     cProcesses = cbNeeded / sizeof(DWORD);
-    if (cbNeeded > sizeof(aProcesses))
-    {
-        std::wcout <<" need more size to save process identifiers\n";
+    if (cbNeeded > sizeof(aProcesses)) {
+        std::wcout << L"compile program with bigger aProcesses[] size\n";
         return 1;
     }
-    Process_end = aProcesses+cProcesses;
 
 
-
+    Process_end = aProcesses + cProcesses;
 
     if (bNoOp)
-        std::wcout <<"no operation mode"<< endl;
+        std::wcout << L"no operation mode"<< endl;
+
     if (bResume)
-    {
-        std::wcout <<"resumed process(es):"<< endl;
-    }
+        std::wcout << L"resumed process(es):"<< endl;
     else
-    {
-        std::wcout <<"suspended process(es):"<< endl;
-    }
-    for ( ; Process_cur< Process_end; ++Process_cur)
-    {
-        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME, false, *Process_cur);
-        if (hProcess)
-        {
+        std::wcout << L"suspended process(es):"<< endl;
+
+    for ( ; Process_cur< Process_end; ++Process_cur) {
+        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
+                               PROCESS_SUSPEND_RESUME, false, *Process_cur);
+        if (hProcess) {
             //BUG:  call GetProcessImageFileName() before QueryFullProcessImageName() or QueryFullProcessImageName() doesn't work properly
             //      That's why MSDN use strange exampe to get process name.
 //            result = GetProcessImageFileName(hProcess, szProcessName, MAX_PATH);
 //            if ( result && QueryFullProcessImageName(hProcess, 0, szProcessName, &result) )
 
             // use GetProcessImageFileName only (don't get full file path, use ImageFileName only)
-            if ( GetProcessImageFileName(hProcess, szProcessName, MAX_PATH) )
-            {
-                exeName = _tcsrchr(szProcessName, '\\') + 1;
-                if ( exeName && nameList.contains( QString::fromWCharArray(exeName), bCaseSensitivity ))
-                {
-                    if (!bNoOp)
-                    {
-                        if (bResume)
-                        {
+            if ( GetProcessImageFileName(hProcess, szProcessName, MAX_PATH) ) {
+                exeName = _tcsrchr(szProcessName, L'\\') + 1;
+                if (exeName && nameList.contains(
+                            QString::fromWCharArray(exeName), bCaseSensitivity )) {
+                    if (!bNoOp) {
+                        if (bResume) {
                             if (!pfnNtResumeProcess(hProcess))
                                 std::wcout << exeName << endl;
-                        }
-                        else
-                        {
-                            if(!pfnNtSuspendProcess(hProcess))
+                        } else if(!pfnNtSuspendProcess(hProcess))
                                 std::wcout << exeName << endl;
-                        }
-                    }
-                    else
+                    } else
                         std::wcout << exeName << endl;
                 }
 			}
-		CloseHandle(hProcess);
+
+            CloseHandle(hProcess);
         }
     }
 
