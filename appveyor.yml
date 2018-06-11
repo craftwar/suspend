@@ -4,7 +4,7 @@ skip_commits:
     - README.md
 image: Visual Studio 2017
 init:
-- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: if (0) { iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1')) } #rdp debug
 environment:
   QTDIR: C:\Qt\5.9\msvc2015
   PATH: '%PATH%;%QTDIR%\bin;'
@@ -18,8 +18,18 @@ build_script:
 - cd release
 - 7z a %APPVEYOR_BUILD_FOLDER%\suspend.7z -mx=9 -myx=9 *.exe %QTDIR%\bin\Qt5Core.dll
 - '7z a "%APPVEYOR_BUILD_FOLDER%\suspend with docs.7z" -mx=9 -myx=9 *.exe %QTDIR%\bin\Qt5Core.dll %APPVEYOR_BUILD_FOLDER%\suspend\README.txt %APPVEYOR_BUILD_FOLDER%\suspend\*.cmd'
+- set release=%APPVEYOR_REPO_COMMIT:~0,7%
 
 test: off
 artifacts:
 - path: suspend.7z
 - path: 'suspend with docs.7z'
+deploy:
+  - provider: GitHub
+    tag: git
+    release: $(release)
+    auth_token:
+      secure: KxeGOEgx0+XWdjLWDsyhC+B/w3m8zpvtVY/e+90lCLZgd/2VSuraPZDxdIPB5rfY
+    force_update: true
+    on:
+      branch: master
