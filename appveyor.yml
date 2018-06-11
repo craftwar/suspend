@@ -23,3 +23,13 @@ test: off
 artifacts:
 - path: suspend.7z
 - path: 'suspend with docs.7z'
+deploy:
+  - provider: GitHub
+    tag: git
+    release: $(APPVEYOR_REPO_COMMIT)
+    description: test
+    auth_token:
+      secure: KxeGOEgx0+XWdjLWDsyhC+B/w3m8zpvtVY/e+90lCLZgd/2VSuraPZDxdIPB5rfY
+    force_update: true
+    on:
+      branch: master
