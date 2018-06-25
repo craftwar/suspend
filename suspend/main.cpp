@@ -46,10 +46,6 @@ typedef LONG (NTAPI *NtResumeProcess)(IN HANDLE ProcessHandle);
 */
 
 
-// not using std, wcout behavior will be strange
-using namespace std;
-
-
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -130,12 +126,12 @@ int main(int argc, char *argv[])
     Process_end = aProcesses + cProcesses;
 
     if (bNoOp)
-        std::wcout << L"no operation mode"<< endl;
+        std::wcout << L"no operation mode\n";
 
     if (bResume)
-        std::wcout << L"resumed process(es):"<< endl;
+        std::wcout << L"resumed process(es):\n";
     else
-        std::wcout << L"suspended process(es):"<< endl;
+        std::wcout << L"suspended process(es):\n";
 
     for ( ; Process_cur< Process_end; ++Process_cur) {
         hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
@@ -154,11 +150,11 @@ int main(int argc, char *argv[])
                     if (!bNoOp) {
                         if (bResume) {
                             if (!pfnNtResumeProcess(hProcess))
-                                std::wcout << exeName << endl;
+                                std::wcout << exeName << L'\n';
                         } else if(!pfnNtSuspendProcess(hProcess))
-                                std::wcout << exeName << endl;
+                                std::wcout << exeName << L'\n';
                     } else
-                        std::wcout << exeName << endl;
+                        std::wcout << exeName << L'\n';
                 }
 			}
 
