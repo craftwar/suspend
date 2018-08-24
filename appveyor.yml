@@ -6,23 +6,41 @@ image: Visual Studio 2017
 init:
 - ps: if (0) { iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1')) } #rdp debug
 environment:
-  QTDIR: C:\Qt\5.9\msvc2015
-  PATH: '%PATH%;%QTDIR%\bin;'
-  APPVEYOR_RDP_PASSWORD:
-    secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
+  QT_VER: 5.9
+  QTDIR: 'C:\Qt\%QT_VER%\msvc2015'
+  QTDIR64: 'C:\Qt\%QT_VER%\msvc2017_64'
+  OLD_PATH: '%PATH%'
+#  APPVEYOR_RDP_PASSWORD:
+#    secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
 build_script:
-- call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+#x86
+- set PATH=%QTDIR%\bin;%OLD_PATH%;
+- '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64_x86' #use cross build x86 to speed up?
 - cd suspend
-- qmake suspend.pro
-- C:\Qt\Tools\QtCreator\bin\jom.exe -f Makefile
+- qmake.exe suspend.pro -spec win32-msvc && C:/Qt/Tools/QtCreator/bin/jom.exe qmake_all
+- C:\Qt\Tools\QtCreator\bin\jom.exe -f Makefile.Release
 - cd release
 - 7z a %APPVEYOR_BUILD_FOLDER%\suspend.7z -mx=9 -myx=9 *.exe %QTDIR%\bin\Qt5Core.dll
 - '7z a "%APPVEYOR_BUILD_FOLDER%\suspend with docs.7z" -mx=9 -myx=9 *.exe %QTDIR%\bin\Qt5Core.dll %APPVEYOR_BUILD_FOLDER%\suspend\README.txt %APPVEYOR_BUILD_FOLDER%\suspend\*.cmd'
+
+#clean
+- del /q *.*
+- cd ..
+
+#x64
+- set PATH=%QTDIR64%\bin;%OLD_PATH%;
+- '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
+- qmake.exe suspend.pro -spec win32-msvc && C:/Qt/Tools/QtCreator/bin/jom.exe qmake_all
+- C:\Qt\Tools\QtCreator\bin\jom.exe -f Makefile.Release
+- cd release
+- 7z a %APPVEYOR_BUILD_FOLDER%\suspend-x64.7z -mx=9 -myx=9 *.exe %QTDIR64%\bin\Qt5Core.dll
+
 - set release=%APPVEYOR_REPO_COMMIT:~0,7%
 
 test: off
 artifacts:
 - path: suspend.7z
+- path: suspend-x64.7z
 - path: 'suspend with docs.7z'
 deploy:
   - provider: GitHub
