@@ -13,7 +13,6 @@
 #ifdef WIN32
 #include <qt_windows.h>
 
-#include <WinNT.h>
 #include <Psapi.h>
 #include <tchar.h>
 #include <fcntl.h>
