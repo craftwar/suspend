@@ -7,7 +7,7 @@
 
 #endif
 
-#include <locale>
+//#include <locale>
 #include <iostream>
 
 #ifdef WIN32
@@ -15,8 +15,8 @@
 
 #include <Psapi.h>
 #include <tchar.h>
-#include <fcntl.h>
 #include <io.h>
+#include <fcntl.h>
 
 #endif
 
@@ -34,7 +34,7 @@
 
 
 typedef LONG (NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
-typedef LONG (NTAPI *NtResumeProcess)(IN HANDLE ProcessHandle);
+//typedef LONG (NTAPI *NtResumeProcess)(IN HANDLE ProcessHandle);
 
 //#define NAMESIZE 255
 
@@ -49,22 +49,14 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    HMODULE hNtdll = GetModuleHandle(TEXT("ntdll"));
-    NtSuspendProcess pfnNtSuspendProcess = (NtSuspendProcess)
-            GetProcAddress( hNtdll, "NtSuspendProcess");
-    NtResumeProcess pfnNtResumeProcess = (NtResumeProcess)
-            GetProcAddress( hNtdll, "NtResumeProcess");
+    const HMODULE hNtdll = GetModuleHandle(TEXT("ntdll"));
 
-    bool bResume, bNoOp;
-    Qt::CaseSensitivity bCaseSensitivity;
     TCHAR szProcessName[MAX_PATH];
     TCHAR *exeName;
     DWORD aProcesses[1024]; // change this to fit your use case
-    DWORD cbNeeded, cProcesses;
+    DWORD cbNeeded;
 //    DWORD result;
     DWORD *Process_cur = aProcesses + 1; // skip System Idle Process
-    DWORD *Process_end; //not included
-    HANDLE hProcess;
 
 // 1) set locale to fix wcout but not working
 //    std::locale::global(std::locale(""));
@@ -98,15 +90,21 @@ int main(int argc, char *argv[])
     });
 //    bool parseResult = parser.parse(a.arguments());
     parser.process(a);
-    bResume = parser.isSet("r");
-    bNoOp = parser.isSet("n");
-    bCaseSensitivity = parser.isSet("s")? Qt::CaseSensitive
-                                        : Qt::CaseInsensitive;
+    const bool bResume = parser.isSet("r");
+    const bool bNoOp = parser.isSet("n");
+    const Qt::CaseSensitivity bCaseSensitivity = parser.isSet("s")
+                ? Qt::CaseSensitive
+                : Qt::CaseInsensitive;
+
+    const NtSuspendProcess pfnOperation = bResume
+                ? (NtSuspendProcess)GetProcAddress(hNtdll, "NtResumeProcess")
+                : (NtSuspendProcess)GetProcAddress(hNtdll, "NtSuspendProcess");
+
 //    bool bPID = parser.isSet(showProgressOption);
 
     QStringList nameList = parser.positionalArguments();
 #ifdef QT_DEBUG
-	qDebug() << nameList << endl;
+    qDebug() << nameList << "\n";
 #endif
 
 
@@ -115,25 +113,20 @@ int main(int argc, char *argv[])
         return 1;
 
     // Calculate how many process identifiers were returned.
-    cProcesses = cbNeeded / sizeof(DWORD);
+    const DWORD cProcesses = cbNeeded / sizeof(DWORD);
     if (cbNeeded > sizeof(aProcesses)) {
         std::wcout << L"compile program with bigger aProcesses[] size\n";
         return 1;
     }
-
-
-    Process_end = aProcesses + cProcesses;
-
+	
     if (bNoOp)
         std::wcout << L"no operation mode\n";
 
-    if (bResume)
-        std::wcout << L"resumed process(es):\n";
-    else
-        std::wcout << L"suspended process(es):\n";
+    std::wcout << (bResume ? L"resumed" : L"suspended")
+               << L" process(es):\n";
 
-    for ( ; Process_cur< Process_end; ++Process_cur) {
-        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
+    for (DWORD * const Process_end = aProcesses + cProcesses; Process_cur< Process_end; ++Process_cur) {
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
                                PROCESS_SUSPEND_RESUME, false, *Process_cur);
         if (hProcess) {
             //BUG:  call GetProcessImageFileName() before QueryFullProcessImageName() or QueryFullProcessImageName() doesn't work properly
@@ -146,13 +139,7 @@ int main(int argc, char *argv[])
                 exeName = _tcsrchr(szProcessName, L'\\') + 1;
                 if (exeName && nameList.contains(
                             QString::fromWCharArray(exeName), bCaseSensitivity )) {
-                    if (!bNoOp) {
-                        if (bResume) {
-                            if (!pfnNtResumeProcess(hProcess))
-                                std::wcout << exeName << L'\n';
-                        } else if(!pfnNtSuspendProcess(hProcess))
-                                std::wcout << exeName << L'\n';
-                    } else
+                    if (bNoOp || !pfnOperation(hProcess))
                         std::wcout << exeName << L'\n';
                 }
 			}
