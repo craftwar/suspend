@@ -17,6 +17,7 @@ DISTFILES += \
 QMAKE_CXXFLAGS += -std:c++latest
 QMAKE_CXXFLAGS_RELEASE += -Gw -Gy -GL -GS-
 QMAKE_LFLAGS_RELEASE += -LTCG
+win32:DEFINES += _HAS_STD_BYTE=0 # may be required to workaround WinSDK Byte issue
 
 if (contains(QMAKE_HOST.arch, x86_64) | $$USE_AVX2) {
     QMAKE_CXXFLAGS_RELEASE += -arch:AVX2

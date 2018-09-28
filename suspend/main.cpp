@@ -9,6 +9,7 @@
 
 //#include <locale>
 #include <iostream>
+#include <conio.h>
 
 #ifdef WIN32
 #include <qt_windows.h>
@@ -17,6 +18,7 @@
 #include <tchar.h>
 #include <io.h>
 #include <fcntl.h>
+
 
 #endif
 
@@ -57,6 +59,7 @@ int main(int argc, char *argv[])
     DWORD cbNeeded;
 //    DWORD result;
     DWORD *Process_cur = aProcesses + 1; // skip System Idle Process
+    NtSuspendProcess pfnOperation;
 
 // 1) set locale to fix wcout but not working
 //    std::locale::global(std::locale(""));
@@ -76,10 +79,11 @@ int main(int argc, char *argv[])
     parser.setApplicationDescription("suspends/resumes process(es)");
     parser.addHelpOption();
     parser.addOptions({
-        {"n", "no operation"},
-        {"r", "resume"},
-        {"s", "case sensitive"},
-        {"p", "process id (not implemented)"},
+                          {"n", "no operation"},
+                          {"r", "resume"},
+                          {"s", "case sensitive"},
+                          {"t", "suspend then resume after pressing any key"},
+                          {"p", "process id (not implemented)"},
 //        // A boolean option with multiple names (-f, --force)
 //        {{"f", "force"},
 //            QCoreApplication::translate("main", "Overwrite existing files.")},
@@ -89,24 +93,9 @@ int main(int argc, char *argv[])
 //            QCoreApplication::translate("main", "directory")},
     });
 //    bool parseResult = parser.parse(a.arguments());
-    parser.process(a);
-    const bool bResume = parser.isSet("r");
-    const bool bNoOp = parser.isSet("n");
-    const Qt::CaseSensitivity bCaseSensitivity = parser.isSet("s")
-                ? Qt::CaseSensitive
-                : Qt::CaseInsensitive;
 
-    const NtSuspendProcess pfnOperation = bResume
-                ? (NtSuspendProcess)GetProcAddress(hNtdll, "NtResumeProcess")
-                : (NtSuspendProcess)GetProcAddress(hNtdll, "NtSuspendProcess");
-
-//    bool bPID = parser.isSet(showProgressOption);
-
-    QStringList nameList = parser.positionalArguments();
-#ifdef QT_DEBUG
-    qDebug() << nameList << "\n";
-#endif
-
+    parser.process(QCoreApplication::arguments());
+//    parser.process(a);
 
     // Get the list of process identifiers.
     if ( !EnumProcesses( aProcesses, sizeof(aProcesses), &cbNeeded ) )
@@ -118,12 +107,38 @@ int main(int argc, char *argv[])
         std::wcout << L"compile program with bigger aProcesses[] size\n";
         return 1;
     }
-	
+
+    const bool bNoOp = parser.isSet("n");
     if (bNoOp)
         std::wcout << L"no operation mode\n";
+    const Qt::CaseSensitivity bCaseSensitivity = parser.isSet("s")
+                ? Qt::CaseSensitive
+                : Qt::CaseInsensitive;
+    enum class Mode : unsigned char {suspend, resume, transition} mode;
 
-    std::wcout << (bResume ? L"resumed" : L"suspended")
-               << L" process(es):\n";
+    if (parser.isSet("t"))
+        mode = Mode::transition;
+    else if (parser.isSet("r")) {
+        mode = Mode::resume;
+        pfnOperation = (NtSuspendProcess)GetProcAddress(hNtdll, "NtResumeProcess");
+        std::wcout << L"resumed";
+    } else
+        mode = Mode::suspend;
+
+    if (mode == Mode::transition || mode == Mode::suspend) {
+        pfnOperation = (NtSuspendProcess)GetProcAddress(hNtdll, "NtSuspendProcess");
+        std::wcout << L"suspended";
+    }
+    std::wcout << L" process(es):\n";
+
+//    bool bPID = parser.isSet(showProgressOption);
+
+    QStringList nameList{parser.positionalArguments()};
+    QList<DWORD> suspendedList;
+#ifdef QT_DEBUG
+    qDebug() << nameList << "\n";
+#endif
+
 
     for (DWORD * const Process_end = aProcesses + cProcesses; Process_cur< Process_end; ++Process_cur) {
         HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
@@ -139,15 +154,32 @@ int main(int argc, char *argv[])
                 exeName = _tcsrchr(szProcessName, L'\\') + 1;
                 if (exeName && nameList.contains(
                             QString::fromWCharArray(exeName), bCaseSensitivity )) {
-                    if (bNoOp || !pfnOperation(hProcess))
+                    if (bNoOp || !pfnOperation(hProcess)) {
                         std::wcout << exeName << L'\n';
+                        if (mode == Mode::transition)
+                            suspendedList.append(*Process_cur);
+                    }
                 }
 			}
 
             CloseHandle(hProcess);
         }
     }
-
+    if (mode == Mode::transition) {
+        std::wcout << L"Press any key to resume suspended process(es):\n";
+        _getch();
+        pfnOperation = (NtSuspendProcess)GetProcAddress(hNtdll, "NtResumeProcess");
+        for (QList<DWORD>::const_iterator itor = suspendedList.cbegin();
+                itor != suspendedList.cend(); ++itor) {
+            HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
+                                   PROCESS_SUSPEND_RESUME, false, *itor);
+            if (hProcess) {
+                if (bNoOp || !pfnOperation(hProcess))
+                    std::wcout << exeName << L'\n';
+                CloseHandle(hProcess);
+            }
+        }
+    }
 
     a.exit();
 //    return a.exec();
