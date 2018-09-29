@@ -49,7 +49,7 @@ typedef LONG (NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
+//    QCoreApplication a(argc, argv);
 
     const HMODULE hNtdll = GetModuleHandle(TEXT("ntdll"));
 
@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
     });
 //    bool parseResult = parser.parse(a.arguments());
 
-    parser.process(QCoreApplication::arguments());
-//    parser.process(a);
+//    parser.process(QCoreApplication::arguments());
+    parser.process(QCoreApplication(argc, argv));
 
     // Get the list of process identifiers.
     if ( !EnumProcesses( aProcesses, sizeof(aProcesses), &cbNeeded ) )
@@ -136,6 +136,7 @@ int main(int argc, char *argv[])
     QStringList nameList{parser.positionalArguments()};
     QList<DWORD> suspendedList;
 #ifdef QT_DEBUG
+    LPTSTR cmd = GetCommandLine();
     qDebug() << nameList << "\n";
 #endif
 
@@ -180,7 +181,6 @@ int main(int argc, char *argv[])
             }
         }
     }
-
-    a.exit();
+    return 0;
 //    return a.exec();
 }
