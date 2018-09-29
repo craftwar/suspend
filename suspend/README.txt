@@ -4,9 +4,9 @@ suspend.exe [-n] [-r] [-s][-t] ProcessName1 [ProcessName2] .....
 Options
 switch can be specified in any postion (first ones are recommended)
 -n	no operation mode (for test or whatever)
--r		resume mode
--s		case sensitive (case insensitive if not specified)
--t		suspend then resume after pressing any key
+-r	resume mode
+-s	case sensitive (case insensitive if not specified)
+-t	suspend then resume after pressing any key
 
 ex:
 to suspend
