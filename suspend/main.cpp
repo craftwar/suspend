@@ -120,13 +120,13 @@ int main(int argc, char *argv[])
         mode = Mode::transition;
     else if (parser.isSet("r")) {
         mode = Mode::resume;
-        pfnOperation = (NtSuspendProcess)GetProcAddress(hNtdll, "NtResumeProcess");
+        pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
         std::wcout << L"resumed";
     } else
         mode = Mode::suspend;
 
     if (mode == Mode::transition || mode == Mode::suspend) {
-        pfnOperation = (NtSuspendProcess)GetProcAddress(hNtdll, "NtSuspendProcess");
+        pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtSuspendProcess"));
         std::wcout << L"suspended";
     }
     std::wcout << L" process(es):\n";
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
     if (mode == Mode::transition) {
         std::wcout << L"Press any key to resume suspended process(es):\n";
         _getch();
-        pfnOperation = (NtSuspendProcess)GetProcAddress(hNtdll, "NtResumeProcess");
+        pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
         for (QList<DWORD>::const_iterator itor = suspendedList.cbegin();
                 itor != suspendedList.cend(); ++itor) {
             HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
