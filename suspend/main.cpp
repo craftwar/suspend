@@ -54,7 +54,6 @@ int main(int argc, char *argv[])
     const HMODULE hNtdll = GetModuleHandle(TEXT("ntdll"));
 
     TCHAR szProcessName[MAX_PATH];
-    TCHAR *exeName;
     DWORD aProcesses[1024]; // change this to fit your use case
     DWORD cbNeeded;
 //    DWORD result;
@@ -116,19 +115,21 @@ int main(int argc, char *argv[])
                 : Qt::CaseInsensitive;
     enum class Mode : unsigned char {suspend, resume, transition} mode;
 
-    if (parser.isSet("t"))
-        mode = Mode::transition;
-    else if (parser.isSet("r")) {
+    if (parser.isSet("r")) {
         mode = Mode::resume;
         pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
         std::wcout << L"resumed";
-    } else
+        goto SET_MODE_END;
+    } else if (parser.isSet("t")) {
+        mode = Mode::transition;
+    } else {
         mode = Mode::suspend;
-
-    if (mode == Mode::transition || mode == Mode::suspend) {
-        pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtSuspendProcess"));
-        std::wcout << L"suspended";
     }
+
+    pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtSuspendProcess"));
+    std::wcout << L"suspended";
+
+SET_MODE_END:
     std::wcout << L" process(es):\n";
 
 //    bool bPID = parser.isSet(showProgressOption);
@@ -152,7 +153,7 @@ int main(int argc, char *argv[])
 
             // use GetProcessImageFileName only (don't get full file path, use ImageFileName only)
             if ( GetProcessImageFileName(hProcess, szProcessName, MAX_PATH) ) {
-                exeName = _tcsrchr(szProcessName, L'\\') + 1;
+                TCHAR * const exeName = _tcsrchr(szProcessName, L'\\') + 1;
                 if (exeName && nameList.contains(
                             QString::fromWCharArray(exeName), bCaseSensitivity )) {
                     if (bNoOp || !pfnOperation(hProcess)) {
@@ -166,6 +167,8 @@ int main(int argc, char *argv[])
             CloseHandle(hProcess);
         }
     }
+// user is smart, don't check
+//    !suspendedList.isEmpty()
     if (mode == Mode::transition) {
         std::wcout << L"Press any key to resume suspended process(es):\n";
         _getch();
@@ -175,8 +178,11 @@ int main(int argc, char *argv[])
             HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
                                    PROCESS_SUSPEND_RESUME, false, *itor);
             if (hProcess) {
-                if (bNoOp || !pfnOperation(hProcess))
-                    std::wcout << exeName << L'\n';
+// display pid is not much meaningful to suspened process name
+//                if (bNoOp || !pfnOperation(hProcess))
+//                    std::wcout << *itor << L'\n';
+                if (!bNoOp)
+                    pfnOperation(hProcess);
                 CloseHandle(hProcess);
             }
         }

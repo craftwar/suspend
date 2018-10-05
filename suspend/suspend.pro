@@ -14,7 +14,7 @@ win32:LIBS += -lKernel32
 DISTFILES += \
     doc.txt
 
-QMAKE_CXXFLAGS += -std:c++latest
+QMAKE_CXXFLAGS += -std:c++latest -Zc:__cplusplus
 QMAKE_CXXFLAGS_RELEASE += -Gw -Gy -GL -GS-
 QMAKE_LFLAGS_RELEASE += -LTCG
 win32:DEFINES += _HAS_STD_BYTE=0 # may be required to workaround WinSDK Byte issue
