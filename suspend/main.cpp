@@ -51,12 +51,11 @@ int main(int argc, char *argv[])
 {
 //    QCoreApplication a(argc, argv);
 
-    const HMODULE hNtdll = GetModuleHandle(TEXT("ntdll"));
+    const HMODULE hNtdll = GetModuleHandleA("ntdll");
 
     TCHAR szProcessName[MAX_PATH];
     DWORD aProcesses[1024]; // change this to fit your use case
     DWORD cbNeeded;
-//    DWORD result;
     DWORD *Process_cur = aProcesses + 1; // skip System Idle Process
     NtSuspendProcess pfnOperation;
 
@@ -69,6 +68,8 @@ int main(int argc, char *argv[])
 // 2) _setmode range wtext > u16text?
 //    _setmode(_fileno(stdout), _O_U16TEXT);
 
+//    SetConsoleCP(65001);
+//    SetConsoleCP(950);
     _setmode(_fileno(stdout), _O_WTEXT);
 
     //TODO
@@ -119,17 +120,17 @@ int main(int argc, char *argv[])
         mode = Mode::resume;
         pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
         std::wcout << L"resumed";
-        goto SET_MODE_END;
-    } else if (parser.isSet("t")) {
-        mode = Mode::transition;
     } else {
-        mode = Mode::suspend;
+        if (parser.isSet("t"))
+            mode = Mode::transition;
+        else
+            mode = Mode::suspend;
+
+
+        pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtSuspendProcess"));
+        std::wcout << L"suspended";
     }
 
-    pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtSuspendProcess"));
-    std::wcout << L"suspended";
-
-SET_MODE_END:
     std::wcout << L" process(es):\n";
 
 //    bool bPID = parser.isSet(showProgressOption);
@@ -148,7 +149,7 @@ SET_MODE_END:
         if (hProcess) {
             //BUG:  call GetProcessImageFileName() before QueryFullProcessImageName() or QueryFullProcessImageName() doesn't work properly
             //      That's why MSDN use strange exampe to get process name.
-//            result = GetProcessImageFileName(hProcess, szProcessName, MAX_PATH);
+//            DWORD result = GetProcessImageFileName(hProcess, szProcessName, MAX_PATH);
 //            if ( result && QueryFullProcessImageName(hProcess, 0, szProcessName, &result) )
 
             // use GetProcessImageFileName only (don't get full file path, use ImageFileName only)
