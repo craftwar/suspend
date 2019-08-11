@@ -174,14 +174,14 @@ int main(int argc, char *argv[])
         std::wcout << L"Press any key to resume suspended process(es):\n";
         _getch();
         pfnOperation = reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
-        for (QList<DWORD>::const_iterator itor = suspendedList.cbegin();
-                itor != suspendedList.cend(); ++itor) {
+        for (QList<DWORD>::const_iterator it = suspendedList.cbegin();
+                it != suspendedList.cend(); ++it) {
             HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
-                                   PROCESS_SUSPEND_RESUME, false, *itor);
+                                   PROCESS_SUSPEND_RESUME, false, *it);
             if (hProcess) {
 // display pid is not much meaningful to suspened process name
 //                if (bNoOp || !pfnOperation(hProcess))
-//                    std::wcout << *itor << L'\n';
+//                    std::wcout << *it << L'\n';
                 if (!bNoOp)
                     pfnOperation(hProcess);
                 CloseHandle(hProcess);
