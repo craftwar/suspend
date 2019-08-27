@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -15,6 +14,11 @@
 	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*str))
 typedef LONG(NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
 
+LONG NTAPI NoOperation(HANDLE ProcessHandle)
+{
+	return 0;
+}
+
 int wmain(int argc, wchar_t *argv[])
 {
 	const HMODULE hNtdll = GetModuleHandleA("ntdll");
@@ -24,13 +28,17 @@ int wmain(int argc, wchar_t *argv[])
 	DWORD cbNeeded;
 	DWORD *Process_cur = aProcesses + 1; // skip System Idle Process
 
-	bool bNoOp = false;
 	enum class Mode : unsigned char {
 		suspend,
 		resume,
 		transition
 	} mode = Mode::suspend;
-	NtSuspendProcess pfnOperation;
+	NtSuspendProcess pfnOperation = reinterpret_cast<NtSuspendProcess>(
+		GetProcAddress(hNtdll, "NtSuspendProcess"));
+	//NtSuspendProcess pfnSuspend = reinterpret_cast<NtSuspendProcess>(
+	//	GetProcAddress(hNtdll, "NtSuspendProcess"));
+	NtSuspendProcess pfnResume = reinterpret_cast<NtSuspendProcess>(
+		GetProcAddress(hNtdll, "NtResumeProcess"));
 	std::vector<wchar_t *> nameList;
 	std::vector<DWORD> suspendedList;
 
@@ -61,7 +69,8 @@ int wmain(int argc, wchar_t *argv[])
 		wchar_t **const end = argv + argc;
 		for (wchar_t **arg = argv + 1; arg < end; ++arg) {
 			if (WSTRCMP_CONST(*arg, L"-n") == 0) {
-				bNoOp = true;
+				pfnOperation = NoOperation;
+				pfnResume = NoOperation;
 				std::wcout << L"no operation mode\n";
 			} else if (WSTRCMP_CONST(*arg, L"-t") == 0)
 				mode = Mode::transition;
@@ -73,12 +82,9 @@ int wmain(int argc, wchar_t *argv[])
 	}
 
 	if (mode == Mode::resume) {
-		pfnOperation = reinterpret_cast<NtSuspendProcess>(
-			GetProcAddress(hNtdll, "NtResumeProcess"));
+		pfnOperation = pfnResume;
 		std::wcout << L"resumed";
 	} else {
-		pfnOperation = reinterpret_cast<NtSuspendProcess>(
-			GetProcAddress(hNtdll, "NtSuspendProcess"));
 		std::wcout << L"suspended";
 	}
 	std::wcout << L" process(es):\n";
@@ -96,8 +102,7 @@ int wmain(int argc, wchar_t *argv[])
 					wcsrchr(szProcessName, L'\\') + 1;
 				for (wchar_t *name : nameList) {
 					if (wcscmp(exeName, name) == 0 &&
-					    (bNoOp ||
-					     !pfnOperation(hProcess))) {
+					    !pfnOperation(hProcess)) {
 
 						std::wcout << exeName << L'\n';
 						if (mode == Mode::transition)
@@ -119,19 +124,14 @@ int wmain(int argc, wchar_t *argv[])
 			<< L"Press any key to resume suspended process(es):\n";
 		_getch();
 
-		if (!bNoOp) {
-			pfnOperation = reinterpret_cast<NtSuspendProcess>(
-				GetProcAddress(hNtdll, "NtResumeProcess"));
-
-			for (DWORD it : suspendedList) {
-				HANDLE hProcess = OpenProcess(
-					PROCESS_QUERY_LIMITED_INFORMATION |
-						PROCESS_SUSPEND_RESUME,
-					false, it);
-				if (hProcess) {
-					pfnOperation(hProcess);
-					CloseHandle(hProcess);
-				}
+		for (DWORD it : suspendedList) {
+			HANDLE hProcess =
+				OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
+						    PROCESS_SUSPEND_RESUME,
+					    false, it);
+			if (hProcess) {
+				pfnResume(hProcess);
+				CloseHandle(hProcess);
 			}
 		}
 	}
