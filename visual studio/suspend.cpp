@@ -10,7 +10,8 @@
 // for _getch
 #include <conio.h>
 
-#define WSTRCMP_CONST(str, const_str) wmemcmp(str, const_str, sizeof(const_str) / sizeof(*str))
+#define WSTRCMP_CONST(str, const_str) \
+	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*const_str))
 typedef LONG(NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
 
 LONG NTAPI NoOperation(HANDLE ProcessHandle)
@@ -21,6 +22,7 @@ LONG NTAPI NoOperation(HANDLE ProcessHandle)
 int wmain(int argc, wchar_t *argv[])
 {
 	const HMODULE hNtdll = GetModuleHandleA("ntdll");
+	bool monitorOff = false;
 
 	wchar_t szProcessName[MAX_PATH];
 	DWORD aProcesses[1024]; // change this to fit your use case
@@ -34,7 +36,8 @@ int wmain(int argc, wchar_t *argv[])
 	//	GetProcAddress(hNtdll, "NtSuspendProcess"));
 	NtSuspendProcess pfnResume =
 		reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
-	std::vector<wchar_t *> nameList(argc);
+	std::vector<wchar_t *> nameList;
+	//std::vector<wchar_t *> nameList(argc); // cause some element filled with nullptr when there is any option argument
 	std::vector<DWORD> suspendedList;
 
 	_setmode(_fileno(stdout), _O_WTEXT);
@@ -62,14 +65,16 @@ int wmain(int argc, wchar_t *argv[])
 	{
 		wchar_t **const end = argv + argc;
 		for (wchar_t **arg = argv + 1; arg < end; ++arg) {
-			if (WSTRCMP_CONST(*arg, L"-n") == 0) {
+			if (!WSTRCMP_CONST(*arg, L"-n")) {
 				pfnOperation = NoOperation;
 				pfnResume = NoOperation;
 				std::wcout << L"no operation mode\n";
-			} else if (WSTRCMP_CONST(*arg, L"-t") == 0)
+			} else if (!WSTRCMP_CONST(*arg, L"-t"))
 				mode = Mode::transition;
-			else if (WSTRCMP_CONST(*arg, L"-r") == 0)
+			else if (!WSTRCMP_CONST(*arg, L"-r"))
 				mode = Mode::resume;
+			else if (!WSTRCMP_CONST(*arg, L"-m"))
+				monitorOff = true;
 			else
 				nameList.push_back(*arg);
 		}
@@ -91,7 +96,7 @@ int wmain(int argc, wchar_t *argv[])
 		if (hProcess && GetProcessImageFileNameW(hProcess, szProcessName, MAX_PATH)) {
 			wchar_t *const exeName = wcsrchr(szProcessName, L'\\') + 1;
 			for (wchar_t *name : nameList) {
-				if (wcscmp(exeName, name) == 0) {
+				if (!wcscmp(exeName, name)) {
 					if (!pfnOperation(hProcess)) {
 						std::wcout << exeName << L'\n';
 						if (mode == Mode::transition)
@@ -103,6 +108,10 @@ int wmain(int argc, wchar_t *argv[])
 			CloseHandle(hProcess);
 		}
 	}
+
+	// or use GetDesktopWindow() as target
+	if (monitorOff)
+		SendMessage(GetConsoleWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 2);
 
 	// for performance, I save pid only
 	// display pid is not much meaningful to suspened process name

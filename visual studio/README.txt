@@ -6,7 +6,8 @@ switch can be specified in any postion (first ones are recommended)
 default mode is suspend
 -n	no operation mode (for test or whatever)
 -r	resume mode
--t	suspend then resume after pressing any key
+-t	toogle mode (suspend then resume after pressing any key)
+-m	turn off monitor (combine this with suspend or toogle)
 
 ex:
 to suspend
@@ -19,6 +20,8 @@ suspend.exe -r a.exe b.exe
 .cmd/.bat batch file usage: (save in UTF-8, not UTF-8 BOM, cmd can't handle UTF-8 BOM)
 sample file: suspend.cmd (I use this script to fast suspend/resume)
 modify the second line targets to yours
+"suspend with monitor off.cmd" add -m option to suspend.cmd (turn off monitor)
+
 Recommend UTF-8 editor: NotePad++
 Don't use windows built-in Notepad. (It will add BOM to UTF-8 file)
 NotePad supports UTF-8 no BOM since Win10 1903
