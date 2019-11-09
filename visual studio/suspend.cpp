@@ -10,8 +10,7 @@
 // for _getch
 #include <conio.h>
 
-#define WSTRCMP_CONST(str, const_str) \
-	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*str))
+#define WSTRCMP_CONST(str, const_str) wmemcmp(str, const_str, sizeof(const_str) / sizeof(*str))
 typedef LONG(NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
 
 LONG NTAPI NoOperation(HANDLE ProcessHandle)
@@ -28,18 +27,14 @@ int wmain(int argc, wchar_t *argv[])
 	DWORD cbNeeded;
 	DWORD *Process_cur = aProcesses + 1; // skip System Idle Process
 
-	enum class Mode : unsigned char {
-		suspend,
-		resume,
-		transition
-	} mode = Mode::suspend;
-	NtSuspendProcess pfnOperation = reinterpret_cast<NtSuspendProcess>(
-		GetProcAddress(hNtdll, "NtSuspendProcess"));
+	enum class Mode : unsigned char { suspend, resume, transition } mode = Mode::suspend;
+	NtSuspendProcess pfnOperation =
+		reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtSuspendProcess"));
 	//NtSuspendProcess pfnSuspend = reinterpret_cast<NtSuspendProcess>(
 	//	GetProcAddress(hNtdll, "NtSuspendProcess"));
-	NtSuspendProcess pfnResume = reinterpret_cast<NtSuspendProcess>(
-		GetProcAddress(hNtdll, "NtResumeProcess"));
-	std::vector<wchar_t *> nameList;
+	NtSuspendProcess pfnResume =
+		reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
+	std::vector<wchar_t *> nameList(argc);
 	std::vector<DWORD> suspendedList;
 
 	_setmode(_fileno(stdout), _O_WTEXT);
@@ -51,8 +46,7 @@ int wmain(int argc, wchar_t *argv[])
 	// Calculate how many process identifiers were returned.
 	const DWORD cProcesses = cbNeeded / sizeof(DWORD);
 	if (cbNeeded > sizeof(aProcesses)) {
-		std::wcout
-			<< L"compile program with bigger aProcesses[] size\n";
+		std::wcout << L"compile program with bigger aProcesses[] size\n";
 		return 1;
 	}
 
@@ -89,25 +83,20 @@ int wmain(int argc, wchar_t *argv[])
 	}
 	std::wcout << L" process(es):\n";
 
-	for (DWORD *const Process_end = aProcesses + cProcesses;
-	     Process_cur < Process_end; ++Process_cur) {
+	for (DWORD *const Process_end = aProcesses + cProcesses; Process_cur < Process_end;
+	     ++Process_cur) {
 		HANDLE hProcess =
-			OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
-					    PROCESS_SUSPEND_RESUME,
+			OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME,
 				    false, *Process_cur);
 		if (hProcess) {
-			if (GetProcessImageFileNameW(hProcess, szProcessName,
-						     MAX_PATH)) {
-				wchar_t *const exeName =
-					wcsrchr(szProcessName, L'\\') + 1;
+			if (GetProcessImageFileNameW(hProcess, szProcessName, MAX_PATH)) {
+				wchar_t *const exeName = wcsrchr(szProcessName, L'\\') + 1;
 				for (wchar_t *name : nameList) {
-					if (wcscmp(exeName, name) == 0 &&
-					    !pfnOperation(hProcess)) {
+					if (wcscmp(exeName, name) == 0 && !pfnOperation(hProcess)) {
 
 						std::wcout << exeName << L'\n';
 						if (mode == Mode::transition)
-							suspendedList.push_back(
-								*Process_cur);
+							suspendedList.push_back(*Process_cur);
 
 						break;
 					}
@@ -120,15 +109,13 @@ int wmain(int argc, wchar_t *argv[])
 	// for performance, I save pid only
 	// display pid is not much meaningful to suspened process name
 	if (mode == Mode::transition) {
-		std::wcout
-			<< L"Press any key to resume suspended process(es):\n";
+		std::wcout << L"Press any key to resume suspended process(es):\n";
 		_getch();
 
 		for (DWORD it : suspendedList) {
-			HANDLE hProcess =
-				OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
-						    PROCESS_SUSPEND_RESUME,
-					    false, it);
+			HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
+							      PROCESS_SUSPEND_RESUME,
+						      false, it);
 			if (hProcess) {
 				pfnResume(hProcess);
 				CloseHandle(hProcess);
