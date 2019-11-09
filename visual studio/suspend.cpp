@@ -88,18 +88,16 @@ int wmain(int argc, wchar_t *argv[])
 		HANDLE hProcess =
 			OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME,
 				    false, *Process_cur);
-		if (hProcess) {
-			if (GetProcessImageFileNameW(hProcess, szProcessName, MAX_PATH)) {
-				wchar_t *const exeName = wcsrchr(szProcessName, L'\\') + 1;
-				for (wchar_t *name : nameList) {
-					if (wcscmp(exeName, name) == 0 && !pfnOperation(hProcess)) {
-
+		if (hProcess && GetProcessImageFileNameW(hProcess, szProcessName, MAX_PATH)) {
+			wchar_t *const exeName = wcsrchr(szProcessName, L'\\') + 1;
+			for (wchar_t *name : nameList) {
+				if (wcscmp(exeName, name) == 0) {
+					if (!pfnOperation(hProcess)) {
 						std::wcout << exeName << L'\n';
 						if (mode == Mode::transition)
 							suspendedList.push_back(*Process_cur);
-
-						break;
 					}
+					break;
 				}
 			}
 			CloseHandle(hProcess);
