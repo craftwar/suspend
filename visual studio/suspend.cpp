@@ -19,7 +19,7 @@ LONG NTAPI NoOperation(HANDLE ProcessHandle)
 	return 0;
 }
 
-int wmain(int argc, wchar_t *argv[])
+int wmain(int argc, wchar_t *__restrict argv[])
 {
 	const HMODULE hNtdll = GetModuleHandleA("ntdll");
 	bool monitorOff = false;
@@ -36,7 +36,7 @@ int wmain(int argc, wchar_t *argv[])
 	//	GetProcAddress(hNtdll, "NtSuspendProcess"));
 	NtSuspendProcess pfnResume =
 		reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
-	std::vector<wchar_t *> nameList;
+	std::vector<wchar_t *__restrict> nameList;
 	//std::vector<wchar_t *> nameList(argc); // cause some element filled with nullptr when there is any option argument
 	std::vector<DWORD> suspendedList;
 
@@ -64,7 +64,7 @@ int wmain(int argc, wchar_t *argv[])
 	// later arg override early ones
 	{
 		wchar_t **const end = argv + argc;
-		for (wchar_t **arg = argv + 1; arg < end; ++arg) {
+		for (wchar_t *__restrict *__restrict arg = argv + 1; arg < end; ++arg) {
 			if (!WSTRCMP_CONST(*arg, L"-n")) {
 				pfnOperation = NoOperation;
 				pfnResume = NoOperation;
@@ -94,8 +94,8 @@ int wmain(int argc, wchar_t *argv[])
 			OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME,
 				    false, *Process_cur);
 		if (hProcess && GetProcessImageFileNameW(hProcess, szProcessName, MAX_PATH)) {
-			wchar_t *const exeName = wcsrchr(szProcessName, L'\\') + 1;
-			for (wchar_t *name : nameList) {
+			wchar_t *__restrict const exeName = wcsrchr(szProcessName, L'\\') + 1;
+			for (wchar_t *__restrict name : nameList) {
 				if (!wcscmp(exeName, name)) {
 					if (!pfnOperation(hProcess)) {
 						std::wcout << exeName << L'\n';
