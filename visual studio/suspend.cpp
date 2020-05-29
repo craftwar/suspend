@@ -37,6 +37,7 @@ int wmain(int argc, wchar_t *__restrict argv[])
 	NtSuspendProcess pfnResume =
 		reinterpret_cast<NtSuspendProcess>(GetProcAddress(hNtdll, "NtResumeProcess"));
 	std::vector<wchar_t *__restrict> nameList;
+	nameList.reserve(argc - 1); // allocate max possible size to prevent reallocation(s)
 	//std::vector<wchar_t *> nameList(argc); // cause some element filled with nullptr when there is any option argument
 	std::vector<DWORD> suspendedList;
 
