@@ -34,11 +34,10 @@ artifacts:
 - path: suspend-AVX2.7z
 - path: 'suspend with docs.7z'
 deploy:
-  - provider: GitHub
+  - provider: Environment
+    name: github git
     tag: git
     release: $(release)
-    auth_token:
-      secure: KxeGOEgx0+XWdjLWDsyhC+B/w3m8zpvtVY/e+90lCLZgd/2VSuraPZDxdIPB5rfY
     force_update: true
     on:
       branch: master
