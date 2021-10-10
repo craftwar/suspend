@@ -4,14 +4,17 @@ suspend.exe [-n] [-r] [-t] ProcessName1 [ProcessName2] .....
 Options
 switch can be specified in any postion (first ones are recommended)
 default mode is suspend
--n	no operation mode (for test or whatever)
+-n	no operation mode (for test or whatever, don't suspend or resume)
 -r	resume mode
 -t	toogle mode (suspend then resume after pressing any key)
--m	turn off monitor (combine this with suspend or toogle)
+-m	turn off monitor after suspending process and specified milliseconds (can be combined with suspend, resume or toogle)
 
 ex:
 to suspend
 suspend.exe a.exe b.exe
+
+to suspend and turn off monitor after 5000 milliseconds
+suspend.exe a.exe b.exe -m 5000
 
 to resume
 suspend.exe -r a.exe b.exe

@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 
@@ -23,6 +24,7 @@ int wmain(int argc, wchar_t *__restrict argv[])
 {
 	const HMODULE hNtdll = GetModuleHandleA("ntdll");
 	bool monitorOff = false;
+	unsigned long monitorDelay = 0;
 
 	wchar_t szProcessName[MAX_PATH];
 	DWORD aProcesses[1024]; // change this to fit your use case
@@ -74,9 +76,14 @@ int wmain(int argc, wchar_t *__restrict argv[])
 				mode = Mode::transition;
 			else if (!WSTRCMP_CONST(*arg, L"-r"))
 				mode = Mode::resume;
-			else if (!WSTRCMP_CONST(*arg, L"-m"))
+			else if (!WSTRCMP_CONST(*arg, L"-m")) {
 				monitorOff = true;
-			else
+				wchar_t **const ptrDelay = arg + 1;
+				if (ptrDelay < end)
+					monitorDelay = std::wcstoul(*ptrDelay, nullptr, 10);
+				if (monitorDelay)
+					++arg;
+			} else
 				nameList.push_back(*arg);
 		}
 	}
@@ -111,8 +118,11 @@ int wmain(int argc, wchar_t *__restrict argv[])
 	}
 
 	// or use GetDesktopWindow() as target
-	if (monitorOff)
+	if (monitorOff) {
+		if (monitorDelay)
+			Sleep(monitorDelay);
 		SendMessage(GetConsoleWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 2);
+	}
 
 	// for performance, I save pid only
 	// display pid is not much meaningful to suspened process name
