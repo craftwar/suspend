@@ -61,7 +61,7 @@ int wmain(int argc, wchar_t *__restrict argv[])
   { "r", "resume" },
   { "s", "case sensitive" },	// removed
   { "t", "suspend then resume after pressing any key" },
-  { "p", "process id (not implemented)" },
+  { "p", "process id" },
   */
 
 	// later arg override early ones
@@ -83,6 +83,10 @@ int wmain(int argc, wchar_t *__restrict argv[])
 					monitorDelay = std::wcstoul(*ptrDelay, nullptr, 10);
 				if (monitorDelay)
 					++arg;
+			} else if (!WSTRCMP_CONST(*arg, L"-p")) {
+				++arg;
+				for (; arg < end; ++arg)
+					suspendedList.push_back(std::wcstoul(*arg, nullptr, 10));
 			} else
 				nameList.push_back(*arg);
 		}
@@ -95,6 +99,16 @@ int wmain(int argc, wchar_t *__restrict argv[])
 		std::wcout << L"suspended";
 	}
 	std::wcout << L" process(es):\n";
+
+	// handle pid mode target
+	for (DWORD it : suspendedList) {
+		HANDLE hProcess = OpenProcess(
+			PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME, false, it);
+		if (hProcess && !pfnOperation(hProcess)) {
+			std::wcout << L"pid " << it << '\n';
+			CloseHandle(hProcess);
+		}
+	}
 
 	for (DWORD *const Process_end = aProcesses + cProcesses; Process_cur < Process_end;
 	     ++Process_cur) {
