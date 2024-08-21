@@ -4,6 +4,7 @@
 
 #include <windows.h>
 #include <Psapi.h>
+#include <powrprof.h>
 
 // for _setmode
 #include <fcntl.h>
@@ -25,6 +26,7 @@ int wmain(int argc, wchar_t *__restrict argv[])
 	const HMODULE hNtdll = GetModuleHandleA("ntdll");
 	bool monitorOff = false;
 	unsigned long monitorDelay = 0;
+	bool suspend = false;
 
 	wchar_t szProcessName[MAX_PATH];
 	DWORD aProcesses[1024]; // change this to fit your use case
@@ -83,7 +85,9 @@ int wmain(int argc, wchar_t *__restrict argv[])
 					monitorDelay = std::wcstoul(*ptrDelay, nullptr, 10);
 				if (monitorDelay)
 					++arg;
-			} else if (!WSTRCMP_CONST(*arg, L"-p")) {
+			} else if (!WSTRCMP_CONST(*arg, L"-s"))
+				suspend = true;
+			else if (!WSTRCMP_CONST(*arg, L"-p")) {
 				++arg;
 				for (; arg < end; ++arg)
 					suspendedList.push_back(std::wcstoul(*arg, nullptr, 10));
@@ -110,7 +114,7 @@ int wmain(int argc, wchar_t *__restrict argv[])
 		}
 	}
 
-	for (DWORD *const Process_end = aProcesses + cProcesses; Process_cur < Process_end;
+	for (const DWORD *const Process_end = aProcesses + cProcesses; Process_cur < Process_end;
 	     ++Process_cur) {
 		HANDLE hProcess =
 			OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME,
@@ -137,6 +141,8 @@ int wmain(int argc, wchar_t *__restrict argv[])
 			Sleep(monitorDelay);
 		SendMessage(GetConsoleWindow(), WM_SYSCOMMAND, SC_MONITORPOWER, 2);
 	}
+	if (suspend)
+		SetSuspendState(FALSE, FALSE, FALSE);
 
 	// for performance, I save pid only
 	// display pid is not much meaningful to suspened process name
