@@ -21,6 +21,10 @@ build_script:
 - call msbuild /m /p:Configuration=Release;Platform=x86 -t:rebuild "%APPVEYOR_BUILD_FOLDER%\visual studio\suspend.sln" /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 - '7z a %APPVEYOR_BUILD_FOLDER%\suspend-AVX2.7z -mx=9 -myx=9 *.exe'
 
+- call msbuild /m /p:Configuration=Release;Platform=ARM64 "%APPVEYOR_BUILD_FOLDER%\visual studio\suspend.sln" /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+- move /y "%APPVEYOR_BUILD_FOLDER%\visual studio\ARM64\Release\*.exe" .
+- '7z a %APPVEYOR_BUILD_FOLDER%\suspend-ARM64.7z -mx=9 -myx=9 *.exe'
+
 #x64
 #- call msbuild /m /p:Configuration=Release;Platform=x64 -t:rebuild "%APPVEYOR_BUILD_FOLDER%\visual studio\suspend.sln" /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 #- '7z a %APPVEYOR_BUILD_FOLDER%\suspend-x64.7z -mx=9 -myx=9 *.exe'
@@ -32,6 +36,7 @@ test: off
 artifacts:
 - path: suspend.7z
 - path: suspend-AVX2.7z
+- path: suspend-ARM64.7z
 - path: 'suspend with docs.7z'
 deploy:
   - provider: Environment
