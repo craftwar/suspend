@@ -53,10 +53,12 @@ int wmain(int argc, wchar_t *__restrict argv[])
 
 	// Calculate how many process identifiers were returned.
 	const DWORD cProcesses = cbNeeded / sizeof(DWORD);
-	if (cbNeeded > sizeof(aProcesses)) {
-		std::wcout << L"compile program with bigger aProcesses[] size\n";
-		return 1;
-	}
+
+	// correct test condition, but leave as comment only, useless test in most scenarios.
+	//if (cbNeeded == sizeof(aProcesses)) {
+	//	std::wcout << L"consider to recompile program with bigger aProcesses[] size\n";
+	//	return 1;
+	//}
 
 	/*
   {"n", "no operation"},
