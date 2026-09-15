@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <unordered_set>
 #include <vector>
 
 #include <windows.h>
@@ -43,22 +44,11 @@ int wmain(int argc, wchar_t *__restrict argv[])
 	std::vector<wchar_t *__restrict> nameList;
 	nameList.reserve(argc - 1); // allocate max possible size to prevent reallocation(s)
 	//std::vector<wchar_t *> nameList(argc); // cause some element filled with nullptr when there is any option argument
-	std::vector<DWORD> suspendedList;
+	std::unordered_set<DWORD> pidList;
+	std::vector<HANDLE> suspendedList;
+	const DWORD selfPid = GetCurrentProcessId(); // to prevent self-suspend
 
 	_setmode(_fileno(stdout), _O_WTEXT);
-
-	// Get the list of process identifiers.
-	if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
-		return 1;
-
-	// Calculate how many process identifiers were returned.
-	const DWORD cProcesses = cbNeeded / sizeof(DWORD);
-
-	// correct test condition, but leave as comment only, useless test in most scenarios.
-	//if (cbNeeded == sizeof(aProcesses)) {
-	//	std::wcout << L"consider to recompile program with bigger aProcesses[] size\n";
-	//	return 1;
-	//}
 
 	/*
   {"n", "no operation"},
@@ -68,7 +58,7 @@ int wmain(int argc, wchar_t *__restrict argv[])
   { "p", "process id" },
   */
 
-	// later arg override early ones
+	// later arg override early ones excpet -n
 	{
 		wchar_t **const end = argv + argc;
 		for (wchar_t *__restrict *__restrict arg = argv + 1; arg < end; ++arg) {
@@ -83,16 +73,21 @@ int wmain(int argc, wchar_t *__restrict argv[])
 			else if (!WSTRCMP_CONST(*arg, L"-m")) {
 				monitorOff = true;
 				wchar_t **const ptrDelay = arg + 1;
-				if (ptrDelay < end)
-					monitorDelay = std::wcstoul(*ptrDelay, nullptr, 10);
-				if (monitorDelay)
-					++arg;
+				if (ptrDelay < end) {
+					wchar_t *endPtr = nullptr;
+					monitorDelay = std::wcstoul(*ptrDelay, &endPtr, 10);
+
+					if (endPtr != *ptrDelay && *endPtr == L'\0')
+						++arg;
+					else
+						monitorDelay = 0;
+				}
 			} else if (!WSTRCMP_CONST(*arg, L"-s"))
 				suspend = true;
-			else if (!WSTRCMP_CONST(*arg, L"-p")) {
-				++arg;
-				for (; arg < end; ++arg)
-					suspendedList.push_back(std::wcstoul(*arg, nullptr, 10));
+			else if (**arg == L'/') {
+				DWORD pid = std::wcstoul(*arg + 1, nullptr, 10);
+				if (pid != selfPid)
+					pidList.insert(pid);
 			} else
 				nameList.push_back(*arg);
 		}
@@ -106,34 +101,60 @@ int wmain(int argc, wchar_t *__restrict argv[])
 	}
 	std::wcout << L" process(es):\n";
 
-	// handle pid mode target
-	for (DWORD it : suspendedList) {
-		HANDLE hProcess = OpenProcess(
-			PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME, false, it);
-		if (hProcess && !pfnOperation(hProcess)) {
-			std::wcout << L"pid " << it << '\n';
-			CloseHandle(hProcess);
-		}
-	}
+	// Get the list of process identifiers.
+	if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
+		return 1;
+
+	// correct test condition, but leave as comment only, useless test in most scenarios.
+	//if (cbNeeded == sizeof(aProcesses)) {
+	//	std::wcout << L"consider to recompile program with bigger aProcesses[] size\n";
+	//	return 1;
+	//}
+
+	// Calculate how many process identifiers were returned.
+	const DWORD cProcesses = cbNeeded / sizeof(DWORD);
 
 	for (const DWORD *const Process_end = aProcesses + cProcesses; Process_cur < Process_end;
 	     ++Process_cur) {
+		if (*Process_cur == selfPid)
+			continue;
 		HANDLE hProcess =
 			OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SUSPEND_RESUME,
 				    false, *Process_cur);
 		if (hProcess && GetProcessImageFileNameW(hProcess, szProcessName, MAX_PATH)) {
+			bool retained = false;
 			wchar_t *__restrict const exeName = wcsrchr(szProcessName, L'\\') + 1;
 			for (wchar_t *__restrict name : nameList) {
 				if (!wcscmp(exeName, name)) {
+					pidList.erase(*Process_cur);
 					if (!pfnOperation(hProcess)) {
 						std::wcout << exeName << L'\n';
-						if (mode == Mode::transition)
-							suspendedList.push_back(*Process_cur);
+						if (mode == Mode::transition) {
+							suspendedList.push_back(hProcess);
+							retained = true;
+						}
 					}
 					break;
 				}
 			}
-			CloseHandle(hProcess);
+			if (!retained)
+				CloseHandle(hProcess);
+		}
+	}
+
+	// handle remaining pid targets
+	while (!pidList.empty()) {
+		auto it = pidList.begin();
+		DWORD pid = *it;
+		pidList.erase(it);
+
+		HANDLE hProcess = OpenProcess(PROCESS_SUSPEND_RESUME, false, pid);
+		if (hProcess && !pfnOperation(hProcess)) {
+			std::wcout << L"pid " << pid << '\n';
+			if (mode == Mode::transition)
+				suspendedList.push_back(hProcess);
+			else
+				CloseHandle(hProcess);
 		}
 	}
 
@@ -146,20 +167,13 @@ int wmain(int argc, wchar_t *__restrict argv[])
 	if (suspend)
 		SetSuspendState(FALSE, FALSE, FALSE);
 
-	// for performance, I save pid only
-	// display pid is not much meaningful to suspened process name
 	if (mode == Mode::transition) {
 		std::wcout << L"Press any key to resume suspended process(es):\n";
 		_getch();
 
-		for (DWORD it : suspendedList) {
-			HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
-							      PROCESS_SUSPEND_RESUME,
-						      false, it);
-			if (hProcess) {
-				pfnResume(hProcess);
-				CloseHandle(hProcess);
-			}
+		for (HANDLE it : suspendedList) {
+			pfnResume(it);
+			CloseHandle(it);
 		}
 	}
 

@@ -9,7 +9,8 @@ default mode is suspend
 -t	toogle mode (suspend then resume after pressing any key)
 -m	turn off monitor after suspending process and specified milliseconds (can be combined with suspend, resume or toogle)
 -s	suspend computer, the system enters a suspend (sleep) state
--p	pid mode, all arguments after this option are interpreted as pid
+
+Arguments prefixed with '/' are treated as PIDs (e.g. /1234).
 
 ex:
 to suspend
